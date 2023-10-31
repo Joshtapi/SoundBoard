@@ -15,10 +15,15 @@ class SoundViewController: UIViewController {
     @IBOutlet weak var reproducirButton: UIButton!
     @IBOutlet weak var nombreTextField: UITextField!
     @IBOutlet weak var agregarButton: UIButton!
+    @IBOutlet weak var lblTiempo: UILabel!
     
     var grabarAudio:AVAudioRecorder?
     var reproducirAudio:AVAudioPlayer?
     var audioURL:URL?
+    var startTime: Date?
+    var timer: Timer?
+    var tiempoTranscurrido : String = ""
+    var isTimerRunning = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -68,13 +73,38 @@ class SoundViewController: UIViewController {
         if grabarAudio!.isRecording{
             grabarAudio?.stop()
             grabarButton.setTitle("GRABAR", for: .normal)
-            reproducirButton.isEnabled = true
+            reproducirButton.isEnabled  = true
             agregarButton.isEnabled = true
-        }else{
+            print("\(startTime!) + aa \(tiempoTranscurrido)")
+            stopTimer()
+        } else {
             grabarAudio?.record()
-            grabarButton.setTitle("DETENER", for: .normal)
-            reproducirButton.isEnabled = true
+            grabarButton.setTitle("Detener", for: .normal)
+            reproducirButton.isEnabled  = false
+            startTimer()
         }
+    }
+    func startTimer() {
+        startTime = Date()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            guard let startTime = self.startTime else { return }
+            let currentTime = Date().timeIntervalSince(startTime)
+            let minutes = Int(currentTime) / 60
+            let seconds = Int(currentTime) % 60
+            self.lblTiempo?.text = String(format: "%02d:%02d", minutes, seconds)
+            self.tiempoTranscurrido = String(format: "%02d:%02d", minutes, seconds)
+            print (String(format: "%02d:%02d", minutes, seconds))
+        }
+        isTimerRunning = true
+    }
+
+    func stopTimer() {
+        
+            timer?.invalidate() // Detiene el temporizador
+            timer = nil
+            isTimerRunning = false
+        
+
     }
     
     @IBAction func reproducirTapped(_ sender: Any) {
@@ -85,14 +115,22 @@ class SoundViewController: UIViewController {
         } catch {}
     }
     
+    @IBAction func volumeSlider(_ sender: UISlider) {
+            print(sender.value)
+      
+            reproducirAudio?.volume = sender.value
+        }
+    
     @IBAction func agregarTapped(_ sender: Any) {
         let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
         let grabacion = Grabacion(context: context)
         grabacion.nombre = nombreTextField.text
         grabacion.audio = NSData(contentsOf: audioURL!)! as Data
+        grabacion.duracion = self.tiempoTranscurrido
         (UIApplication.shared.delegate as! AppDelegate).saveContext()
         navigationController!.popViewController(animated: true)
     }
+    
 
     /*
     // MARK: - Navigation
